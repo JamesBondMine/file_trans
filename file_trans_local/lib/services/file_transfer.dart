@@ -5,7 +5,7 @@ import 'package:path_provider/path_provider.dart';
 import 'package:path/path.dart' as path;
 import 'package:open_filex/open_filex.dart';
 import 'package:permission_handler/permission_handler.dart';
-import 'package:image_gallery_saver/image_gallery_saver.dart';
+import 'package:gal/gal.dart';
 import '../models/device_info.dart';
 
 class FileTransferService {
@@ -172,22 +172,9 @@ class FileTransferService {
           }
         }
 
-        // 读取文件
-        final file = File(filePath);
-        final bytes = await file.readAsBytes();
-
-        // 保存到相册
-        final result = await ImageGallerySaver.saveImage(
-          bytes,
-          quality: 100,
-          name: fileName,
-        );
-
-        if (result['isSuccess'] == true) {
-          print('✅ 文件已自动保存到相册: $fileName');
-        } else {
-          print('⚠️ 保存到相册失败');
-        }
+        // 使用 Gal 保存到相册
+        await Gal.putImage(filePath, album: '局域网文件传输');
+        print('✅ 文件已自动保存到相册: $fileName');
       }
     } catch (e) {
       print('保存到相册时出错: $e');

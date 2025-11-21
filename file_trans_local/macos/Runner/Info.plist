@@ -28,5 +28,15 @@
 	<string>MainMenu</string>
 	<key>NSPrincipalClass</key>
 	<string>NSApplication</string>
+	<!-- 本地网络权限 -->
+	<key>NSLocalNetworkUsageDescription</key>
+	<string>需要访问本地网络以发现和连接局域网内的设备进行文件传输</string>
+	<key>NSBonjourServices</key>
+	<array>
+		<string>_file-transfer._tcp</string>
+	</array>
+	<!-- 相机权限（二维码扫描） -->
+	<key>NSCameraUsageDescription</key>
+	<string>需要使用相机扫描二维码以快速连接设备</string>
 </dict>
 </plist>

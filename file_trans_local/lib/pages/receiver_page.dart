@@ -30,6 +30,28 @@ class _ReceiverPageState extends State<ReceiverPage> with SingleTickerProviderSt
       duration: const Duration(seconds: 2),
     )..repeat();
     _startScanning();
+    _checkLocalIP();
+  }
+
+  String? _localIP;
+
+  Future<void> _checkLocalIP() async {
+    try {
+      final interfaces = await NetworkInterface.list();
+      for (final interface in interfaces) {
+        for (final addr in interface.addresses) {
+          if (addr.type == InternetAddressType.IPv4 && !addr.isLoopback) {
+            setState(() {
+              _localIP = addr.address;
+            });
+            break;
+          }
+        }
+        if (_localIP != null) break;
+      }
+    } catch (e) {
+      print('获取本地IP失败: $e');
+    }
   }
 
   @override
@@ -56,7 +78,8 @@ class _ReceiverPageState extends State<ReceiverPage> with SingleTickerProviderSt
     } catch (e) {
       _showError('扫描设备失败: $e');
     } finally {
-      Future.delayed(const Duration(seconds: 3), () {
+      // 增加扫描时间到10秒
+      Future.delayed(const Duration(seconds: 10), () {
         if (mounted) {
           setState(() {
             _isScanning = false;
@@ -356,7 +379,22 @@ class _ReceiverPageState extends State<ReceiverPage> with SingleTickerProviderSt
               ),
             ),
             const SizedBox(width: 12),
-            const Text('接收文件'),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Text('接收文件'),
+                  if (_localIP != null)
+                    Text(
+                      '本机: $_localIP',
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                            color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+                          ),
+                    ),
+                ],
+              ),
+            ),
           ],
         ),
         elevation: 0,
@@ -563,6 +601,14 @@ class _ReceiverPageState extends State<ReceiverPage> with SingleTickerProviderSt
                     color: Colors.grey[600],
                   ),
             ),
+            const SizedBox(height: 8),
+            Text(
+              '提示：也可以使用右上角的扫码或手动输入功能',
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: Colors.grey[500],
+                    fontStyle: FontStyle.italic,
+                  ),
+            ),
           ],
         ).animate(onPlay: (controller) => controller.repeat()).shimmer(
               duration: 2000.ms,
@@ -604,6 +650,37 @@ class _ReceiverPageState extends State<ReceiverPage> with SingleTickerProviderSt
               style: Theme.of(context).textTheme.bodyLarge?.copyWith(
                     color: Colors.grey[600],
                   ),
+            ),
+            const SizedBox(height: 12),
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Theme.of(context).colorScheme.surfaceContainerHighest,
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Column(
+                children: [
+                  Row(
+                    children: [
+                      Icon(Icons.lightbulb_outline, color: Colors.amber[700], size: 20),
+                      const SizedBox(width: 8),
+                      Text(
+                        '推荐连接方式：',
+                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                              fontWeight: FontWeight.bold,
+                            ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    '• 点击右上角 📷 扫描二维码（最快）\n• 点击右上角 ✏️ 手动输入IP地址（最可靠）\n\n💡 如果始终扫描不到设备，请确保:\n  - 两台设备连接同一WiFi\n  - 设备在同一网段（IP前3段相同）',
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: Colors.grey[700],
+                        ),
+                  ),
+                ],
+              ),
             ),
             const SizedBox(height: 32),
             FilledButton.icon(

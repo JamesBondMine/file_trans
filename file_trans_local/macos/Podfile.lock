@@ -4,6 +4,9 @@ PODS:
   - file_picker (0.0.1):
     - FlutterMacOS
   - FlutterMacOS (1.0.0)
+  - gal (1.0.0):
+    - Flutter
+    - FlutterMacOS
   - mobile_scanner (5.2.3):
     - FlutterMacOS
   - network_info_plus (0.0.1):
@@ -15,6 +18,7 @@ DEPENDENCIES:
   - device_info_plus (from `Flutter/ephemeral/.symlinks/plugins/device_info_plus/macos`)
   - file_picker (from `Flutter/ephemeral/.symlinks/plugins/file_picker/macos`)
   - FlutterMacOS (from `Flutter/ephemeral`)
+  - gal (from `Flutter/ephemeral/.symlinks/plugins/gal/darwin`)
   - mobile_scanner (from `Flutter/ephemeral/.symlinks/plugins/mobile_scanner/macos`)
   - network_info_plus (from `Flutter/ephemeral/.symlinks/plugins/network_info_plus/macos`)
   - objective_c (from `Flutter/ephemeral/.symlinks/plugins/objective_c/macos`)
@@ -26,6 +30,8 @@ EXTERNAL SOURCES:
     :path: Flutter/ephemeral/.symlinks/plugins/file_picker/macos
   FlutterMacOS:
     :path: Flutter/ephemeral
+  gal:
+    :path: Flutter/ephemeral/.symlinks/plugins/gal/darwin
   mobile_scanner:
     :path: Flutter/ephemeral/.symlinks/plugins/mobile_scanner/macos
   network_info_plus:
@@ -37,10 +43,11 @@ SPEC CHECKSUMS:
   device_info_plus: a56e6e74dbbd2bb92f2da12c64ddd4f67a749041
   file_picker: 7584aae6fa07a041af2b36a2655122d42f578c1a
   FlutterMacOS: d0db08ddef1a9af05a5ec4b724367152bb0500b1
+  gal: baecd024ebfd13c441269ca7404792a7152fde89
   mobile_scanner: bd1e7cd9b67b442f4d903747f4778e040513f860
   network_info_plus: f52abf61c7a311ecf3ac1b482be8a28908b4604d
   objective_c: ec13431e45ba099cb734eb2829a5c1cd37986cba
 
-PODFILE CHECKSUM: 54d867c82ac51cbd61b565781b9fada492027009
+PODFILE CHECKSUM: 346bfb2deb41d4a6ebd6f6799f92188bde2d246f
 
 COCOAPODS: 1.16.2

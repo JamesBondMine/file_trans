@@ -5,6 +5,7 @@ import 'package:path_provider/path_provider.dart';
 import 'package:path/path.dart' as path;
 import 'package:open_filex/open_filex.dart';
 import 'package:permission_handler/permission_handler.dart';
+import 'package:image_gallery_saver/image_gallery_saver.dart';
 import '../models/device_info.dart';
 
 class FileTransferService {
@@ -61,7 +62,10 @@ class FileTransferService {
 
       await sink.close();
 
-      // 6. 下载完成
+      // 6. 检查是否是图片或视频，如果是则保存到相册
+      await _saveToGalleryIfNeeded(savePath, fileName);
+
+      // 7. 下载完成
       onComplete(savePath);
     } catch (e) {
       onError(e.toString());
@@ -146,6 +150,61 @@ class FileTransferService {
     } catch (e) {
       throw Exception('打开文件失败: $e');
     }
+  }
+
+  /// 检查文件类型并保存到相册
+  Future<void> _saveToGalleryIfNeeded(String filePath, String fileName) async {
+    try {
+      final extension = path.extension(fileName).toLowerCase();
+      
+      // 图片格式
+      final imageExtensions = ['.jpg', '.jpeg', '.png', '.gif', '.bmp', '.webp', '.heic'];
+      // 视频格式
+      final videoExtensions = ['.mp4', '.mov', '.avi', '.mkv', '.flv', '.wmv', '.m4v'];
+
+      if (imageExtensions.contains(extension) || videoExtensions.contains(extension)) {
+        // 请求相册权限
+        if (Platform.isAndroid || Platform.isIOS) {
+          final status = await Permission.photos.request();
+          if (!status.isGranted) {
+            print('相册权限未授予，跳过保存到相册');
+            return;
+          }
+        }
+
+        // 读取文件
+        final file = File(filePath);
+        final bytes = await file.readAsBytes();
+
+        // 保存到相册
+        final result = await ImageGallerySaver.saveImage(
+          bytes,
+          quality: 100,
+          name: fileName,
+        );
+
+        if (result['isSuccess'] == true) {
+          print('✅ 文件已自动保存到相册: $fileName');
+        } else {
+          print('⚠️ 保存到相册失败');
+        }
+      }
+    } catch (e) {
+      print('保存到相册时出错: $e');
+      // 不抛出错误，因为这是额外功能
+    }
+  }
+
+  /// 检查文件是否为图片
+  bool isImageFile(String fileName) {
+    final extension = path.extension(fileName).toLowerCase();
+    return ['.jpg', '.jpeg', '.png', '.gif', '.bmp', '.webp', '.heic'].contains(extension);
+  }
+
+  /// 检查文件是否为视频
+  bool isVideoFile(String fileName) {
+    final extension = path.extension(fileName).toLowerCase();
+    return ['.mp4', '.mov', '.avi', '.mkv', '.flv', '.wmv', '.m4v'].contains(extension);
   }
 }
 

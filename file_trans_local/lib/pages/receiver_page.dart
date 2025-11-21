@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 import '../services/device_discovery.dart';
 import '../services/file_transfer.dart';
@@ -13,22 +14,28 @@ class ReceiverPage extends StatefulWidget {
   State<ReceiverPage> createState() => _ReceiverPageState();
 }
 
-class _ReceiverPageState extends State<ReceiverPage> {
+class _ReceiverPageState extends State<ReceiverPage> with SingleTickerProviderStateMixin {
   final DeviceDiscovery _discovery = DeviceDiscovery();
   final FileTransferService _transferService = FileTransferService();
   List<DeviceInfo> _devices = [];
   bool _isScanning = false;
   TransferInfo? _transferInfo;
+  late AnimationController _scanAnimationController;
 
   @override
   void initState() {
     super.initState();
+    _scanAnimationController = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 2),
+    )..repeat();
     _startScanning();
   }
 
   @override
   void dispose() {
     _discovery.stop();
+    _scanAnimationController.dispose();
     super.dispose();
   }
 
@@ -41,7 +48,6 @@ class _ReceiverPageState extends State<ReceiverPage> {
     try {
       _discovery.startDiscovery((device) {
         setState(() {
-          // 避免重复添加
           if (!_devices.any((d) => d.ip == device.ip && d.port == device.port)) {
             _devices.add(device);
           }
@@ -50,7 +56,6 @@ class _ReceiverPageState extends State<ReceiverPage> {
     } catch (e) {
       _showError('扫描设备失败: $e');
     } finally {
-      // 模拟扫描过程
       Future.delayed(const Duration(seconds: 3), () {
         if (mounted) {
           setState(() {
@@ -90,9 +95,18 @@ class _ReceiverPageState extends State<ReceiverPage> {
               progress: 1.0,
             );
           });
-          _showSuccess('文件已保存至: $filePath');
-          
-          // 如果是APK文件，提示安装
+
+          final fileName = filePath.split('/').last;
+          final isImage = _transferService.isImageFile(fileName);
+          final isVideo = _transferService.isVideoFile(fileName);
+
+          // 显示成功消息
+          if (isImage || isVideo) {
+            _showSuccess('✨ 文件已保存\n📁 位置: $filePath\n📱 已自动保存到相册');
+          } else {
+            _showSuccess('✨ 文件已保存至: $filePath');
+          }
+
           if (filePath.endsWith('.apk') && Platform.isAndroid) {
             _showInstallDialog(filePath);
           }
@@ -116,19 +130,34 @@ class _ReceiverPageState extends State<ReceiverPage> {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('APK文件已下载'),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: Theme.of(context).colorScheme.primaryContainer,
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: const Text('📦', style: TextStyle(fontSize: 24)),
+            ),
+            const SizedBox(width: 12),
+            const Expanded(child: Text('APK文件已下载')),
+          ],
+        ),
         content: const Text('是否立即安装此APK文件？'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('取消'),
+            child: const Text('稍后'),
           ),
-          FilledButton(
+          FilledButton.icon(
             onPressed: () {
               Navigator.pop(context);
               _installApk(filePath);
             },
-            child: const Text('安装'),
+            icon: const Icon(Icons.install_mobile_rounded),
+            label: const Text('立即安装'),
           ),
         ],
       ),
@@ -148,15 +177,19 @@ class _ReceiverPageState extends State<ReceiverPage> {
     showDialog(
       context: context,
       builder: (context) => Dialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             AppBar(
               title: const Text('扫描二维码'),
               automaticallyImplyLeading: false,
+              shape: const RoundedRectangleBorder(
+                borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+              ),
               actions: [
                 IconButton(
-                  icon: const Icon(Icons.close),
+                  icon: const Icon(Icons.close_rounded),
                   onPressed: () => Navigator.pop(context),
                 ),
               ],
@@ -205,7 +238,14 @@ class _ReceiverPageState extends State<ReceiverPage> {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('手动输入地址'),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: Row(
+          children: [
+            Icon(Icons.edit_rounded, color: Theme.of(context).colorScheme.primary),
+            const SizedBox(width: 12),
+            const Text('手动输入地址'),
+          ],
+        ),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -214,6 +254,7 @@ class _ReceiverPageState extends State<ReceiverPage> {
               decoration: const InputDecoration(
                 labelText: 'IP地址',
                 hintText: '例如: 192.168.1.100',
+                prefixIcon: Icon(Icons.wifi_rounded),
               ),
             ),
             const SizedBox(height: 16),
@@ -222,6 +263,7 @@ class _ReceiverPageState extends State<ReceiverPage> {
               decoration: const InputDecoration(
                 labelText: '端口',
                 hintText: '例如: 8080',
+                prefixIcon: Icon(Icons.lan_rounded),
               ),
               keyboardType: TextInputType.number,
             ),
@@ -232,11 +274,11 @@ class _ReceiverPageState extends State<ReceiverPage> {
             onPressed: () => Navigator.pop(context),
             child: const Text('取消'),
           ),
-          FilledButton(
+          FilledButton.icon(
             onPressed: () {
               final ip = ipController.text.trim();
               final port = int.tryParse(portController.text.trim()) ?? 8080;
-              
+
               if (ip.isEmpty) {
                 _showError('请输入IP地址');
                 return;
@@ -251,7 +293,8 @@ class _ReceiverPageState extends State<ReceiverPage> {
               );
               _downloadFile(device);
             },
-            child: const Text('连接'),
+            icon: const Icon(Icons.link_rounded),
+            label: const Text('连接'),
           ),
         ],
       ),
@@ -260,35 +303,88 @@ class _ReceiverPageState extends State<ReceiverPage> {
 
   void _showError(String message) {
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(message), backgroundColor: Colors.red),
+      SnackBar(
+        content: Row(
+          children: [
+            const Icon(Icons.error_outline, color: Colors.white),
+            const SizedBox(width: 12),
+            Expanded(child: Text(message)),
+          ],
+        ),
+        backgroundColor: Colors.red.shade600,
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      ),
     );
   }
 
   void _showSuccess(String message) {
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(message), backgroundColor: Colors.green),
+      SnackBar(
+        content: Row(
+          children: [
+            const Icon(Icons.check_circle, color: Colors.white),
+            const SizedBox(width: 12),
+            Expanded(child: Text(message)),
+          ],
+        ),
+        backgroundColor: Colors.green.shade600,
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        duration: const Duration(seconds: 5),
+      ),
     );
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: Theme.of(context).colorScheme.surface,
       appBar: AppBar(
-        title: const Text('接收文件'),
-        elevation: 2,
+        title: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: Theme.of(context).colorScheme.primaryContainer,
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Icon(
+                Icons.download_rounded,
+                color: Theme.of(context).colorScheme.primary,
+                size: 24,
+              ),
+            ),
+            const SizedBox(width: 12),
+            const Text('接收文件'),
+          ],
+        ),
+        elevation: 0,
+        backgroundColor: Colors.transparent,
         actions: [
           IconButton(
-            icon: const Icon(Icons.qr_code_scanner),
+            icon: const Icon(Icons.qr_code_scanner_rounded),
             onPressed: _showQRScanner,
             tooltip: '扫描二维码',
           ),
           IconButton(
-            icon: const Icon(Icons.edit),
+            icon: const Icon(Icons.edit_rounded),
             onPressed: _showManualInputDialog,
             tooltip: '手动输入',
           ),
           IconButton(
-            icon: const Icon(Icons.refresh),
+            icon: AnimatedBuilder(
+              animation: _scanAnimationController,
+              builder: (context, child) {
+                return Transform.rotate(
+                  angle: _isScanning ? _scanAnimationController.value * 2 * 3.14159 : 0,
+                  child: Icon(
+                    Icons.refresh_rounded,
+                    color: _isScanning ? Theme.of(context).colorScheme.primary : null,
+                  ),
+                );
+              },
+            ),
             onPressed: _isScanning ? null : _startScanning,
             tooltip: '刷新',
           ),
@@ -297,7 +393,11 @@ class _ReceiverPageState extends State<ReceiverPage> {
       body: Column(
         children: [
           // 传输进度卡片
-          if (_transferInfo != null) _buildTransferProgress(),
+          if (_transferInfo != null)
+            _buildTransferProgress()
+                .animate()
+                .fadeIn(duration: 400.ms)
+                .slideY(begin: -0.2, end: 0),
 
           // 设备列表
           Expanded(
@@ -311,73 +411,163 @@ class _ReceiverPageState extends State<ReceiverPage> {
   Widget _buildTransferProgress() {
     if (_transferInfo == null) return const SizedBox.shrink();
 
-    return Card(
-      margin: const EdgeInsets.all(16),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Icon(
-                  _transferInfo!.status == TransferStatus.completed
-                      ? Icons.check_circle
-                      : _transferInfo!.status == TransferStatus.failed
-                          ? Icons.error
-                          : Icons.download,
-                  color: _transferInfo!.status == TransferStatus.completed
-                      ? Colors.green
-                      : _transferInfo!.status == TransferStatus.failed
-                          ? Colors.red
-                          : Colors.blue,
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        _transferInfo!.fileName,
-                        style: Theme.of(context).textTheme.titleMedium,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                      Text(
-                        _transferInfo!.fileSizeFormatted,
-                        style: Theme.of(context).textTheme.bodySmall,
-                      ),
-                    ],
-                  ),
-                ),
-                Text(
-                  '${_transferInfo!.progressPercentage}%',
-                  style: Theme.of(context).textTheme.titleMedium,
-                ),
-              ],
-            ),
-            const SizedBox(height: 8),
-            LinearProgressIndicator(
-              value: _transferInfo!.progress,
-              backgroundColor: Colors.grey[300],
-            ),
+    Color statusColor;
+    IconData statusIcon;
+    String statusText;
+
+    switch (_transferInfo!.status) {
+      case TransferStatus.completed:
+        statusColor = Colors.green;
+        statusIcon = Icons.check_circle_rounded;
+        statusText = '完成';
+        break;
+      case TransferStatus.failed:
+        statusColor = Colors.red;
+        statusIcon = Icons.error_rounded;
+        statusText = '失败';
+        break;
+      case TransferStatus.preparing:
+        statusColor = Colors.orange;
+        statusIcon = Icons.hourglass_empty_rounded;
+        statusText = '准备中';
+        break;
+      default:
+        statusColor = Colors.blue;
+        statusIcon = Icons.downloading_rounded;
+        statusText = '下载中';
+    }
+
+    return Container(
+      margin: const EdgeInsets.all(20),
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [
+            statusColor.withOpacity(0.1),
+            statusColor.withOpacity(0.05),
           ],
         ),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(
+          color: statusColor.withOpacity(0.3),
+          width: 2,
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: statusColor.withOpacity(0.2),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Icon(statusIcon, color: statusColor, size: 28),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      _transferInfo!.fileName,
+                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                            fontWeight: FontWeight.bold,
+                          ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    const SizedBox(height: 4),
+                    Row(
+                      children: [
+                        Text(
+                          _transferInfo!.fileSizeFormatted,
+                          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                color: Colors.grey[600],
+                              ),
+                        ),
+                        const SizedBox(width: 12),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: statusColor.withOpacity(0.2),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Text(
+                            statusText,
+                            style: TextStyle(
+                              color: statusColor,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 12,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+              Text(
+                '${_transferInfo!.progressPercentage}%',
+                style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                      fontWeight: FontWeight.bold,
+                      color: statusColor,
+                    ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(8),
+            child: LinearProgressIndicator(
+              value: _transferInfo!.progress,
+              backgroundColor: Colors.grey[300],
+              valueColor: AlwaysStoppedAnimation<Color>(statusColor),
+              minHeight: 8,
+            ),
+          ),
+        ],
       ),
     );
   }
 
   Widget _buildDeviceList() {
     if (_isScanning && _devices.isEmpty) {
-      return const Center(
+      return Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            CircularProgressIndicator(),
-            SizedBox(height: 16),
-            Text('正在扫描局域网设备...'),
+            SizedBox(
+              width: 80,
+              height: 80,
+              child: CircularProgressIndicator(
+                strokeWidth: 6,
+                valueColor: AlwaysStoppedAnimation<Color>(
+                  Theme.of(context).colorScheme.primary,
+                ),
+              ),
+            ),
+            const SizedBox(height: 24),
+            Text(
+              '正在扫描局域网设备...',
+              style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.bold,
+                  ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              '请确保发送端已启动服务',
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    color: Colors.grey[600],
+                  ),
+            ),
           ],
-        ),
+        ).animate(onPlay: (controller) => controller.repeat()).shimmer(
+              duration: 2000.ms,
+              color: Colors.white.withOpacity(0.1),
+            ),
       );
     }
 
@@ -386,30 +576,43 @@ class _ReceiverPageState extends State<ReceiverPage> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(
-              Icons.devices_other,
-              size: 64,
-              color: Colors.grey[400],
-            ),
-            const SizedBox(height: 16),
+            Container(
+              padding: const EdgeInsets.all(32),
+              decoration: BoxDecoration(
+                color: Theme.of(context).colorScheme.surfaceContainerHighest,
+                shape: BoxShape.circle,
+              ),
+              child: Icon(
+                Icons.devices_other_rounded,
+                size: 80,
+                color: Colors.grey[400],
+              ),
+            )
+                .animate(onPlay: (controller) => controller.repeat(reverse: true))
+                .scale(duration: 2000.ms, begin: const Offset(1, 1), end: const Offset(1.1, 1.1)),
+            const SizedBox(height: 32),
             Text(
               '未发现设备',
-              style: Theme.of(context).textTheme.titleMedium?.copyWith(
+              style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                    fontWeight: FontWeight.bold,
+                    color: Colors.grey[700],
+                  ),
+            ),
+            const SizedBox(height: 12),
+            Text(
+              '请确保发送端已启动服务',
+              style: Theme.of(context).textTheme.bodyLarge?.copyWith(
                     color: Colors.grey[600],
                   ),
             ),
-            const SizedBox(height: 8),
-            Text(
-              '请确保发送端已启动服务',
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: Colors.grey[500],
-                  ),
-            ),
-            const SizedBox(height: 24),
+            const SizedBox(height: 32),
             FilledButton.icon(
               onPressed: _startScanning,
-              icon: const Icon(Icons.refresh),
+              icon: const Icon(Icons.refresh_rounded),
               label: const Text('重新扫描'),
+              style: FilledButton.styleFrom(
+                padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
+              ),
             ),
           ],
         ),
@@ -417,25 +620,76 @@ class _ReceiverPageState extends State<ReceiverPage> {
     }
 
     return ListView.builder(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(20),
       itemCount: _devices.length,
       itemBuilder: (context, index) {
         final device = _devices[index];
-        return Card(
-          margin: const EdgeInsets.only(bottom: 12),
-          child: ListTile(
-            leading: CircleAvatar(
-              child: Icon(_getDeviceIcon(device.deviceType)),
+        return Container(
+          margin: const EdgeInsets.only(bottom: 16),
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              colors: [
+                Theme.of(context).colorScheme.primaryContainer,
+                Theme.of(context).colorScheme.secondaryContainer,
+              ],
             ),
-            title: Text(device.name),
-            subtitle: Text('${device.ip}:${device.port}'),
+            borderRadius: BorderRadius.circular(20),
+            boxShadow: [
+              BoxShadow(
+                color: Theme.of(context).colorScheme.primary.withOpacity(0.1),
+                blurRadius: 10,
+                offset: const Offset(0, 4),
+              ),
+            ],
+          ),
+          child: ListTile(
+            contentPadding: const EdgeInsets.all(20),
+            leading: Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Icon(
+                _getDeviceIcon(device.deviceType),
+                size: 32,
+                color: Theme.of(context).colorScheme.primary,
+              ),
+            ),
+            title: Text(
+              device.name,
+              style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                    fontWeight: FontWeight.bold,
+                  ),
+            ),
+            subtitle: Padding(
+              padding: const EdgeInsets.only(top: 8.0),
+              child: Row(
+                children: [
+                  Icon(Icons.wifi_rounded, size: 16, color: Colors.grey[600]),
+                  const SizedBox(width: 4),
+                  Text(
+                    '${device.ip}:${device.port}',
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                          fontFamily: 'monospace',
+                        ),
+                  ),
+                ],
+              ),
+            ),
             trailing: FilledButton.icon(
               onPressed: () => _downloadFile(device),
-              icon: const Icon(Icons.download),
+              icon: const Icon(Icons.download_rounded),
               label: const Text('接收'),
+              style: FilledButton.styleFrom(
+                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+              ),
             ),
           ),
-        );
+        )
+            .animate()
+            .fadeIn(delay: (index * 100).ms, duration: 400.ms)
+            .slideX(begin: 0.2, end: 0);
       },
     );
   }
@@ -443,18 +697,17 @@ class _ReceiverPageState extends State<ReceiverPage> {
   IconData _getDeviceIcon(String deviceType) {
     switch (deviceType.toLowerCase()) {
       case 'android':
-        return Icons.android;
+        return Icons.android_rounded;
       case 'ios':
-        return Icons.phone_iphone;
+        return Icons.phone_iphone_rounded;
       case 'macos':
-        return Icons.laptop_mac;
+        return Icons.laptop_mac_rounded;
       case 'windows':
-        return Icons.laptop_windows;
+        return Icons.laptop_windows_rounded;
       case 'linux':
-        return Icons.computer;
+        return Icons.computer_rounded;
       default:
-        return Icons.devices;
+        return Icons.devices_rounded;
     }
   }
 }
-

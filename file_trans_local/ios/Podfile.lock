@@ -63,6 +63,8 @@ PODS:
   - GoogleUtilitiesComponents (1.1.0):
     - GoogleUtilities/Logger
   - GTMSessionFetcher/Core (3.5.0)
+  - image_gallery_saver (2.0.2):
+    - Flutter
   - MLImage (1.0.0-beta5)
   - MLKitBarcodeScanning (5.0.0):
     - MLKitCommon (~> 11.0)
@@ -106,6 +108,7 @@ DEPENDENCIES:
   - device_info_plus (from `.symlinks/plugins/device_info_plus/ios`)
   - file_picker (from `.symlinks/plugins/file_picker/ios`)
   - Flutter (from `Flutter`)
+  - image_gallery_saver (from `.symlinks/plugins/image_gallery_saver/ios`)
   - mobile_scanner (from `.symlinks/plugins/mobile_scanner/ios`)
   - network_info_plus (from `.symlinks/plugins/network_info_plus/ios`)
   - objective_c (from `.symlinks/plugins/objective_c/ios`)
@@ -138,6 +141,8 @@ EXTERNAL SOURCES:
     :path: ".symlinks/plugins/file_picker/ios"
   Flutter:
     :path: Flutter
+  image_gallery_saver:
+    :path: ".symlinks/plugins/image_gallery_saver/ios"
   mobile_scanner:
     :path: ".symlinks/plugins/mobile_scanner/ios"
   network_info_plus:
@@ -161,6 +166,7 @@ SPEC CHECKSUMS:
   GoogleUtilities: ea963c370a38a8069cc5f7ba4ca849a60b6d7d15
   GoogleUtilitiesComponents: 679b2c881db3b615a2777504623df6122dd20afe
   GTMSessionFetcher: 5aea5ba6bd522a239e236100971f10cb71b96ab6
+  image_gallery_saver: 14711d79da40581063e8842a11acf1969d781ed7
   MLImage: 1824212150da33ef225fbd3dc49f184cf611046c
   MLKitBarcodeScanning: 10ca0845a6d15f2f6e911f682a1998b68b973e8b
   MLKitCommon: afec63980417d29ffbb4790529a1b0a2291699e1

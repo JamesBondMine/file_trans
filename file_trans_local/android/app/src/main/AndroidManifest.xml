@@ -23,7 +23,7 @@
     <uses-permission android:name="android.permission.CAMERA" />
 
     <application
-        android:label="file_trans_local"
+        android:label="FileFly"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
         <activity

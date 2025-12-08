@@ -124,10 +124,12 @@ class _ReceiverPageState extends State<ReceiverPage> with SingleTickerProviderSt
           final isVideo = _transferService.isVideoFile(fileName);
 
           // 显示成功消息
-          if (isImage || isVideo) {
+          if ((isImage || isVideo) && (Platform.isAndroid || Platform.isIOS)) {
+            // Android/iOS: 图片/视频会保存到相册
             _showSuccess('✨ 文件已保存\n📁 位置: $filePath\n📱 已自动保存到相册');
           } else {
-            _showSuccess('✨ 文件已保存至: $filePath');
+            // macOS 或其他文件类型
+            _showSuccess('✨ 文件已保存至:\n$filePath');
           }
 
           if (filePath.endsWith('.apk') && Platform.isAndroid) {

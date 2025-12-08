@@ -62,8 +62,10 @@ class FileTransferService {
 
       await sink.close();
 
-      // 6. 检查是否是图片或视频，如果是则保存到相册
-      await _saveToGalleryIfNeeded(savePath, fileName);
+      // 6. 检查是否是图片或视频，如果是则保存到相册（仅 Android/iOS）
+      if (Platform.isAndroid || Platform.isIOS) {
+        await _saveToGalleryIfNeeded(savePath, fileName);
+      }
 
       // 7. 下载完成
       onComplete(savePath);
@@ -173,7 +175,7 @@ class FileTransferService {
         }
 
         // 使用 Gal 保存到相册
-        await Gal.putImage(filePath, album: '局域网文件传输');
+        await Gal.putImage(filePath, album: 'FileFly');
         print('✅ 文件已自动保存到相册: $fileName');
       }
     } catch (e) {
